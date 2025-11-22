@@ -11,30 +11,19 @@ from visualization import (
     plot_static_map_plotly,
 )
 
+
 # Coordenadas en formato decimal (lat, lon).
 ALL_CITIES = [
-    # Región VII: Maule
-    {"name": "Talca",       "region": "VII Maule",      "lat": -35.4264,   "lon": -71.65542},
-    {"name": "Curicó",      "region": "VII Maule",      "lat": -34.98279,  "lon": -71.23943},
-    {"name": "Linares",     "region": "VII Maule",      "lat": -35.84667,  "lon": -71.59308},
-    {"name": "Cauquenes",   "region": "VII Maule",      "lat": -35.96710,  "lon": -72.32248},
-    {"name": "Constitución","region": "VII Maule",      "lat": -35.33321,  "lon": -72.41156},
-
-    # Región VIII: Biobío
-    {"name": "Concepción",  "region": "VIII Biobío",    "lat": -36.82699,  "lon": -73.04977},
-    {"name": "Talcahuano",  "region": "VIII Biobío",    "lat": -36.71667,  "lon": -73.11667},
-    {"name": "Los Ángeles", "region": "VIII Biobío",    "lat": -37.46973,  "lon": -72.35366},
-    {"name": "Chillán",     "region": "VIII Biobío",    "lat": -36.60664,  "lon": -72.10344},
-    {"name": "Coronel",     "region": "VIII Biobío",    "lat": -37.03390,  "lon": -73.14800},
-
-    # Región IX: La Araucanía
-    {"name": "Temuco",      "region": "IX Araucanía",   "lat": -38.7359018,"lon": -72.5903739},
-    {"name": "Angol",       "region": "IX Araucanía",   "lat": -37.79519,  "lon": -72.71636},
-    {"name": "Villarrica",  "region": "IX Araucanía",   "lat": -39.282012, "lon": -72.23078},
-    {"name": "Pucón",       "region": "IX Araucanía",   "lat": -39.272254, "lon": -71.977628},
-    {"name": "Nueva Imperial","region": "IX Araucanía", "lat": -38.7445218,"lon": -72.9482281},
+    {"name": "Los Angeles",   "lat": 34.052235,  "lon": -118.243683},
+    {"name": "San Francisco", "lat": 37.774929,  "lon": -122.419416},
+    {"name": "Seattle",       "lat": 47.606209,  "lon": -122.332069},
+    {"name": "Denver",        "lat": 39.739236,  "lon": -104.990251},
+    {"name": "Chicago",       "lat": 41.878113,  "lon": -87.629799},
+    {"name": "Houston",       "lat": 29.760427,  "lon": -95.369804},
+    {"name": "Miami",         "lat": 25.761681,  "lon": -80.191788},
+    {"name": "New York",      "lat": 40.712776,  "lon": -74.005974},
+    {"name": "Atlanta",       "lat": 33.748995,  "lon": -84.387982},
 ]
-
 
 # ==============================
 # Utilidades de distancias
@@ -76,14 +65,30 @@ def print_distance_matrix(D: list, cities: list) -> None:
 
 def select_cities(cities: list, n: int = 9, seed: int = 42) -> list:
     """
-    Selecciona n ciudades de la lista completa.
+    Selecciona n ciudades de la lista completa asegurando que 'Denver'
+    sea el primer elemento (ciudad de inicio).
 
     Se usa un seed fijo para que el subconjunto sea reproducible.
     """
     if n > len(cities):
         raise ValueError("n no puede ser mayor al número de ciudades disponibles")
+    # Buscar la ciudad "Denver" (case-insensitive)
+    start_city = "denver"
+    start_idx = next((i for i, c in enumerate(cities) if c["name"].lower() == start_city), None)
+    if start_idx is None:
+        raise ValueError("La ciudad 'Denver' no está en la lista de ciudades disponibles")
+
+    # Si se pide sólo 1 ciudad, devolver solo Denver
+    if n == 1:
+        return [cities[start_idx]]
+
+    # Seleccionar aleatoriamente el resto, sin incluir Denver, y mantener reproducibilidad
+    remaining = [c for i, c in enumerate(cities) if i != start_idx]
     random.seed(seed)
-    return random.sample(cities, n)
+    others = random.sample(remaining, n - 1)
+
+    # Devolver Denver como primera ciudad (inicio) seguida por el resto seleccionadas
+    return [cities[start_idx]] + others
 
 
 # ==============================
@@ -96,14 +101,12 @@ def main():
 
     total = len(ALL_CITIES)
     n = len(cities)
-    print(f"Número total de ciudades en la base: {total}")
     print(f"Número de ciudades seleccionadas para el experimento: {n}\n")
 
     print("Ciudades seleccionadas:")
     for i, c in enumerate(cities):
         print(
             f"  {i}: {c['name']} "
-            f"({c['region']}) "
             f"(lat={c['lat']:.6f}, lon={c['lon']:.6f})"
         )
     print()
@@ -172,12 +175,15 @@ def main():
     ratio = time_brute / time_nn if time_nn > 0 else float("inf")
     print(f"Relación de tiempos (exhaustivo / NN) = {ratio:.2f}x\n")
 
+    # Unidad para las visualizaciones 
+    units = " "
+
     # --- Mapa estático (Plotly) ---
-    plot_static_map_plotly(cities, opt_path, opt_length, nn_path, nn_length)
+    plot_static_map_plotly(cities, opt_path, opt_length, nn_path, nn_length, units=units)
 
     # --- Animaciones (Plotly) ---
-    animate_bruteforce_plotly(cities, steps_brute)
-    animate_nearest_neighbor_plotly(cities, steps_nn)
+    animate_bruteforce_plotly(cities, steps_brute, units=units)
+    animate_nearest_neighbor_plotly(cities, steps_nn, units=units)
 
 
 if __name__ == "__main__":

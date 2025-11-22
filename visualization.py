@@ -65,14 +65,15 @@ def _build_background_trace(xs: List[float], ys: List[float]) -> go.Scatter:
         x=x_bg,
         y=y_bg,
         mode="lines",
-        line=dict(color="rgba(160,160,160,0.5)", width=1.8),  # más gruesas
+        line=dict(color="rgba(200,200,200,0.3)", width=1.5),
         hoverinfo="skip",
         showlegend=False,
         name="Grafo completo",
     )
 
 
-def _build_nodes_trace(cities: List[dict], xs: List[float], ys: List[float]) -> go.Scatter:
+def _build_nodes_trace(cities: List[dict], xs: List[float], ys: List[float], 
+                       highlight_first: bool = False) -> go.Scatter:
     """
     Construye el trace de nodos con etiquetas de ciudades.
 
@@ -80,11 +81,21 @@ def _build_nodes_trace(cities: List[dict], xs: List[float], ys: List[float]) -> 
         cities: Lista de diccionarios con la información de las ciudades.
         xs: Lista de coordenadas X de los nodos.
         ys: Lista de coordenadas Y de los nodos.
+        highlight_first: Si True, resalta la primera ciudad (Denver) en color diferente.
 
     Returns:
         Trace Scatter con los nodos y sus etiquetas.
     """
     labels = [f"{i}: {c['name']}" for i, c in enumerate(cities)]
+    
+    if highlight_first:
+        # Colores: primer nodo en verde brillante, resto en gris
+        colors = ['rgb(46, 204, 113)'] + ['rgb(140,140,140)'] * (len(cities) - 1)
+        sizes = [16] + [11] * (len(cities) - 1)
+    else:
+        colors = 'rgb(140,140,140)'
+        sizes = 11
+    
     return go.Scatter(
         x=xs,
         y=ys,
@@ -92,11 +103,11 @@ def _build_nodes_trace(cities: List[dict], xs: List[float], ys: List[float]) -> 
         text=labels,
         textposition="top center",
         marker=dict(
-            size=11,
-            color="rgb(140,140,140)",
-            line=dict(color="rgb(80,80,80)", width=1.2),
+            size=sizes,
+            color=colors,
+            line=dict(color="rgb(255,255,255)", width=2),
         ),
-        textfont=dict(color="rgb(60,60,60)", size=11),
+        textfont=dict(color="rgb(40,40,40)", size=12, family="Arial Black"),
         name="Ciudades",
         hoverinfo="text",
     )
@@ -123,42 +134,43 @@ def _path_to_xy(path: List[int], xs: List[float], ys: List[float]):
 # Animación: búsqueda exhaustiva
 # ==============================
 
-def animate_bruteforce_plotly(cities: List[dict], steps: list):
+def animate_bruteforce_plotly(cities: List[dict], steps: list, units: str = "km"):
     """
     Genera una animación Plotly para la búsqueda exhaustiva del TSP.
 
     La animación muestra:
       - El grafo completo como fondo.
-      - El ciclo actual en cada iteración (naranjo).
+      - El ciclo actual en cada iteración (azul).
       - El mejor ciclo encontrado hasta ese momento (rojo).
 
     Args:
         cities: Lista de ciudades con coordenadas y nombre.
         steps: Lista de estados de la búsqueda. Cada elemento es:
                (path, length, best_path, best_length).
+        units: Unidad de distancia para mostrar en títulos.
     """
     if not steps:
         return
 
     xs, ys = _compute_xy(cities)
     bg_trace = _build_background_trace(xs, ys)
-    nodes_trace = _build_nodes_trace(cities, xs, ys)
+    nodes_trace = _build_nodes_trace(cities, xs, ys, highlight_first=True)
 
     # Traces que se actualizan en cada frame
     current_trace = go.Scatter(
         x=[],
         y=[],
         mode="lines+markers",
-        line=dict(color="orange", width=2.6),  # un poco más gruesa
-        marker=dict(size=7),
+        line=dict(color="rgb(52, 152, 219)", width=3),
+        marker=dict(size=8, color="rgb(52, 152, 219)"),
         name="Ciclo actual",
     )
     best_trace = go.Scatter(
         x=[],
         y=[],
         mode="lines+markers",
-        line=dict(color="red", width=3.4),     # un poco más gruesa
-        marker=dict(size=7),
+        line=dict(color="rgb(231, 76, 60)", width=4),
+        marker=dict(size=9, color="rgb(231, 76, 60)"),
         name="Mejor ciclo",
     )
 
@@ -171,7 +183,6 @@ def animate_bruteforce_plotly(cities: List[dict], steps: list):
 
         frame = go.Frame(
             data=[
-                # Actualiza los traces en posiciones 2 (ciclo actual) y 3 (mejor ciclo)
                 dict(type="scatter", x=x_curr, y=y_curr),
                 dict(type="scatter", x=x_best, y=y_best),
             ],
@@ -179,9 +190,9 @@ def animate_bruteforce_plotly(cities: List[dict], steps: list):
             name=str(k),
             layout=go.Layout(
                 title=(
-                    f"Búsqueda exhaustiva (TSP) | "
-                    f"Iteración {k+1}/{total} | "
-                    f"L actual = {length:.4f} · L* = {best_length:.4f}"
+                    f"<b style='font-size:22px'>Búsqueda Exhaustiva (TSP)</b><br>"
+                    f"<span style='font-size:18px'>Iteración {k+1}/{total} | "
+                    f"L actual = {length:.4f} {units} · L* = {best_length:.4f} {units}</span>"
                 )
             ),
         )
@@ -190,45 +201,59 @@ def animate_bruteforce_plotly(cities: List[dict], steps: list):
     fig = go.Figure(
         data=[bg_trace, nodes_trace, current_trace, best_trace],
         layout=go.Layout(
-            title="Búsqueda exhaustiva (TSP)",
-            width=1200,
-            height=900,
-            margin=dict(t=90, r=60, b=80, l=70),
+            title=f"<b style='font-size:22px'>Búsqueda Exhaustiva (TSP)</b>",
+            width=1300,
+            height=850,
+            margin=dict(t=100, r=250, b=100, l=80),
             xaxis=dict(
-                title="Longitud (escala relativa)",
+                title="<b style='font-size:18px'>Longitud (escala relativa)</b>",
                 showgrid=True,
-                gridcolor="rgb(220,220,220)",
+                gridcolor="rgb(230,230,230)",
+                gridwidth=1,
                 zeroline=False,
+                showline=True,
+                linewidth=2,
+                linecolor="rgb(30,30,30)",
+                mirror=True,
             ),
             yaxis=dict(
-                title="Latitud (escala relativa)",
-                scaleanchor="x",   # Mantiene proporción 1:1
+                title="<b style='font-size:18px'>Latitud (escala relativa)</b>",
+                scaleanchor="x",
                 scaleratio=1,
                 showgrid=True,
-                gridcolor="rgb(220,220,220)",
+                gridcolor="rgb(230,230,230)",
+                gridwidth=1,
                 zeroline=False,
+                showline=True,
+                linewidth=2,
+                linecolor="rgb(30,30,30)",
+                mirror=True,
             ),
-            plot_bgcolor="white",
+            plot_bgcolor="rgb(250,250,250)",
             paper_bgcolor="white",
-            font=dict(color="black", size=13),
+            font=dict(color="rgb(30,30,30)", size=15, family="Arial"),
             updatemenus=[
                 dict(
                     type="buttons",
-                    showactive=False,
-                    x=0.5,
-                    y=0.02,               # abajo
-                    xanchor="center",
-                    yanchor="bottom",
-                    direction="right",
+                    showactive=True,
+                    x=1.02,
+                    y=0.5,
+                    xanchor="left",
+                    yanchor="middle",
+                    direction="down",
+                    pad=dict(r=10, t=10, b=10, l=10),
+                    bgcolor="rgb(240,240,240)",
+                    bordercolor="rgb(30,30,30)",
+                    borderwidth=2,
                     buttons=[
                         dict(
-                            label="Play",
+                            label="<b>▶ PLAY</b>",
                             method="animate",
                             args=[None, {"frame": {"duration": 70, "redraw": True},
                                          "fromcurrent": True}],
                         ),
                         dict(
-                            label="Pause",
+                            label="<b>⏸ PAUSE</b>",
                             method="animate",
                             args=[[None], {"frame": {"duration": 0, "redraw": False},
                                            "mode": "immediate"}],
@@ -237,56 +262,62 @@ def animate_bruteforce_plotly(cities: List[dict], steps: list):
                 )
             ],
             legend=dict(
-                bgcolor="rgba(255,255,255,0.9)",
-                bordercolor="rgba(0,0,0,0.2)",
-                borderwidth=1,
+                x=1.02,
+                y=0.98,
+                xanchor="left",
+                bgcolor="rgba(255,255,255,0.95)",
+                bordercolor="rgb(30,30,30)",
+                borderwidth=2,
+                font=dict(size=14),
             ),
         ),
         frames=frames,
     )
 
-    fig.show()
+    # Mostrar en navegador para evitar dependencia nbformat
+    fig.show(renderer="browser")
 
 
 # ==============================
 # Animación: Vecino Más Cercano
 # ==============================
 
-def animate_nearest_neighbor_plotly(cities: List[dict], steps: list):
+def animate_nearest_neighbor_plotly(cities: List[dict], steps: list, units: str = "km"):
     """
     Genera una animación Plotly para la heurística de Vecino Más Cercano.
 
     La animación muestra:
       - El grafo completo como fondo.
-      - La ruta parcial construida hasta el momento (naranjo).
-      - La arista actual que se añade en cada paso (rojo, grosor según distancia).
+      - La ruta parcial construida hasta el momento (naranja).
+      - La arista actual que se añade en cada paso (verde, grosor según distancia).
 
     Args:
         cities: Lista de ciudades con coordenadas y nombre.
         steps: Lista de estados de la heurística. Cada elemento es:
                (path, length, current, next_city, dist).
+        units: Unidad de distancia para mostrar en títulos.
     """
     if not steps:
         return
 
     xs, ys = _compute_xy(cities)
     bg_trace = _build_background_trace(xs, ys)
-    nodes_trace = _build_nodes_trace(cities, xs, ys)
+    nodes_trace = _build_nodes_trace(cities, xs, ys, highlight_first=True)
 
-    # Ruta parcial (naranjo) y arista actual (rojo)
+    # Ruta parcial (naranja) y arista actual (verde)
     path_trace = go.Scatter(
         x=[],
         y=[],
         mode="lines+markers",
-        line=dict(color="orange", width=2.6),
-        marker=dict(size=7),
+        line=dict(color="rgb(230, 126, 34)", width=3),
+        marker=dict(size=8, color="rgb(230, 126, 34)"),
         name="Ruta parcial",
     )
     edge_trace = go.Scatter(
         x=[],
         y=[],
         mode="lines",
-        line=dict(color="red", width=4.5),
+        line=dict(color="rgb(39, 174, 96)", width=5),
         name="Arista actual",
     )
 
@@ -305,7 +336,7 @@ def animate_nearest_neighbor_plotly(cities: List[dict], steps: list):
 
         # Normaliza el grosor de la arista actual según la distancia
         t = (dist - min_d) / (max_d - min_d)
-        width = 3 + 7 * t  # un poco más base y más rango
+        width = 4 + 8 * t
 
         frame = go.Frame(
             data=[
@@ -316,10 +347,10 @@ def animate_nearest_neighbor_plotly(cities: List[dict], steps: list):
             name=str(k),
             layout=go.Layout(
                 title=(
-                    "Heurística Vecino Más Cercano (NN) | "
-                    f"Paso {k+1}/{total} | "
+                    f"<b style='font-size:22px'>Heurística Vecino Más Cercano (NN)</b><br>"
+                    f"<span style='font-size:18px'>Paso {k+1}/{total} | "
                     f"{cities[current]['name']} → {cities[next_city]['name']} "
-                    f"(dist = {dist:.4f}) · L acum = {length:.4f}"
+                    f"(dist = {dist:.4f} {units}) · L acum = {length:.4f} {units}</span>"
                 )
             ),
         )
@@ -328,45 +359,59 @@ def animate_nearest_neighbor_plotly(cities: List[dict], steps: list):
     fig = go.Figure(
         data=[bg_trace, nodes_trace, path_trace, edge_trace],
         layout=go.Layout(
-            title="Heurística Vecino Más Cercano (NN)",
-            width=1200,
-            height=900,
-            margin=dict(t=90, r=60, b=80, l=70),
+            title=f"<b style='font-size:22px'>Heurística Vecino Más Cercano (NN)</b>",
+            width=1300,
+            height=850,
+            margin=dict(t=100, r=250, b=100, l=80),
             xaxis=dict(
-                title="Longitud (escala relativa)",
+                title="<b style='font-size:18px'>Longitud (escala relativa)</b>",
                 showgrid=True,
-                gridcolor="rgb(220,220,220)",
+                gridcolor="rgb(230,230,230)",
+                gridwidth=1,
                 zeroline=False,
+                showline=True,
+                linewidth=2,
+                linecolor="rgb(30,30,30)",
+                mirror=True,
             ),
             yaxis=dict(
-                title="Latitud (escala relativa)",
+                title="<b style='font-size:18px'>Latitud (escala relativa)</b>",
                 scaleanchor="x",
                 scaleratio=1,
                 showgrid=True,
-                gridcolor="rgb(220,220,220)",
+                gridcolor="rgb(230,230,230)",
+                gridwidth=1,
                 zeroline=False,
+                showline=True,
+                linewidth=2,
+                linecolor="rgb(30,30,30)",
+                mirror=True,
             ),
-            plot_bgcolor="white",
+            plot_bgcolor="rgb(250,250,250)",
             paper_bgcolor="white",
-            font=dict(color="black", size=13),
+            font=dict(color="rgb(30,30,30)", size=15, family="Arial"),
             updatemenus=[
                 dict(
                     type="buttons",
-                    showactive=False,
-                    x=0.5,
-                    y=0.02,              # abajo
-                    xanchor="center",
-                    yanchor="bottom",
-                    direction="right",
+                    showactive=True,
+                    x=1.02,
+                    y=0.5,
+                    xanchor="left",
+                    yanchor="middle",
+                    direction="down",
+                    pad=dict(r=10, t=10, b=10, l=10),
+                    bgcolor="rgb(240,240,240)",
+                    bordercolor="rgb(30,30,30)",
+                    borderwidth=2,
                     buttons=[
                         dict(
-                            label="Play",
+                            label="<b>▶ PLAY</b>",
                             method="animate",
                             args=[None, {"frame": {"duration": 600, "redraw": True},
                                          "fromcurrent": True}],
                         ),
                         dict(
-                            label="Pause",
+                            label="<b>⏸ PAUSE</b>",
                             method="animate",
                             args=[[None], {"frame": {"duration": 0, "redraw": False},
                                            "mode": "immediate"}],
@@ -375,15 +420,20 @@ def animate_nearest_neighbor_plotly(cities: List[dict], steps: list):
                 )
             ],
             legend=dict(
-                bgcolor="rgba(255,255,255,0.9)",
-                bordercolor="rgba(0,0,0,0.2)",
-                borderwidth=1,
+                x=1.02,
+                y=0.98,
+                xanchor="left",
+                bgcolor="rgba(255,255,255,0.95)",
+                bordercolor="rgb(30,30,30)",
+                borderwidth=2,
+                font=dict(size=14),
             ),
         ),
         frames=frames,
     )
 
-    fig.show()
+    # Mostrar en navegador para evitar dependencia nbformat
+    fig.show(renderer="browser")
 
 
 # ==============================
@@ -396,13 +446,14 @@ def plot_static_map_plotly(
     opt_length: float,
     nn_path: List[int],
     nn_length: float,
+    units: str = "km",
 ):
     """
     Genera un mapa estático comparando la ruta óptima y la heurística NN.
 
     El mapa se compone de dos subgráficos:
       - Subgráfico 1: ruta óptima (búsqueda exhaustiva, en rojo).
-      - Subgráfico 2: ruta generada por la heurística Vecino Más Cercano (naranjo).
+      - Subgráfico 2: ruta generada por la heurística Vecino Más Cercano (naranja).
 
     Args:
         cities: Lista de ciudades con coordenadas y nombre.
@@ -410,20 +461,73 @@ def plot_static_map_plotly(
         opt_length: Longitud total del recorrido óptimo.
         nn_path: Recorrido generado por la heurística NN.
         nn_length: Longitud total del recorrido NN.
+        units: Unidad de distancia para mostrar en títulos.
     """
     xs, ys = _compute_xy(cities)
 
     def path_to_xy(path: List[int]):
         return _path_to_xy(path, xs, ys)
 
+    # Calcular el gap de optimalidad
+    gap = ((nn_length - opt_length) / opt_length * 100.0) if opt_length > 0 else 0
+
     fig = make_subplots(
         rows=1,
         cols=2,
         subplot_titles=(
-            f"Ruta óptima (exhaustiva) - L* = {opt_length:.4f}",
-            f"Heurística Vecino Más Cercano - L_NN = {nn_length:.4f}",
+            f"<b style='font-size:20px'>Ruta Óptima (Exhaustiva)</b><br>"
+            f"<span style='font-size:18px'>L* = {opt_length:.4f} {units}</span><br>",
+    
+            f"<b style='font-size:20px'>Heurística Vecino Más Cercano</b><br>"
+            f"<span style='font-size:18px'>L_NN = {nn_length:.4f} {units} ",
         ),
+
+        horizontal_spacing=0.10,
+        vertical_spacing=0.22,
     )
+
+    # Función auxiliar para crear nodos con Denver resaltado
+    def add_nodes_to_subplot(row, col, path):
+        # Nodos normales (sin Denver)
+        xs_regular = [xs[i] for i in range(len(cities)) if i != 0]
+        ys_regular = [ys[i] for i in range(len(cities)) if i != 0]
+        labels_regular = [f"{i}: {cities[i]['name']}" for i in range(len(cities)) if i != 0]
+        
+        fig.add_trace(
+            go.Scatter(
+                x=xs_regular,
+                y=ys_regular,
+                mode="markers+text",
+                marker=dict(size=12, color="rgb(120,120,120)", 
+                           line=dict(color="rgb(255,255,255)", width=2)),
+                text=labels_regular,
+                textposition="top center",
+                textfont=dict(color="rgb(40,40,40)", size=12, family="Arial"),
+                showlegend=False,
+                hoverinfo="text",
+            ),
+            row=row,
+            col=col,
+        )
+        
+        # Denver (ciudad 0) resaltado en verde
+        fig.add_trace(
+            go.Scatter(
+                x=[xs[0]],
+                y=[ys[0]],
+                mode="markers+text",
+                marker=dict(size=18, color="rgb(46, 204, 113)", 
+                           line=dict(color="rgb(255,255,255)", width=3),
+                           symbol="star"),
+                text=[f"0: {cities[0]['name']}<br>(INICIO)"],
+                textposition="top center",
+                textfont=dict(color="rgb(46, 204, 113)", size=13, family="Arial Black"),
+                showlegend=False,
+                hoverinfo="text",
+            ),
+            row=row,
+            col=col,
+        )
 
     # Ruta óptima (roja)
     x_opt, y_opt = path_to_xy(opt_path)
@@ -431,61 +535,82 @@ def plot_static_map_plotly(
         go.Scatter(
             x=x_opt,
             y=y_opt,
-            mode="lines+markers+text",
-            line=dict(color="red", width=3.5),
-            marker=dict(size=9, color="rgb(120,120,120)"),
-            text=[cities[i]["name"] for i in opt_path],
-            textposition="top center",
+            mode="lines+markers",
+            line=dict(color="rgb(231, 76, 60)", width=4),
+            marker=dict(size=10, color="rgb(231, 76, 60)", 
+                       line=dict(color="rgb(255,255,255)", width=2)),
             name="Ruta óptima",
+            showlegend=False,
         ),
         row=1,
         col=1,
     )
+    add_nodes_to_subplot(1, 1, opt_path)
 
-    # Ruta NN (naranjo)
+    # Ruta NN (naranja)
     x_nn, y_nn = path_to_xy(nn_path)
     fig.add_trace(
         go.Scatter(
             x=x_nn,
             y=y_nn,
-            mode="lines+markers+text",
-            line=dict(color="orange", width=3.5),
-            marker=dict(size=9, color="rgb(120,120,120)"),
-            text=[cities[i]["name"] for i in nn_path],
-            textposition="top center",
+            mode="lines+markers",
+            line=dict(color="rgb(230, 126, 34)", width=4),
+            marker=dict(size=10, color="rgb(230, 126, 34)",
+                       line=dict(color="rgb(255,255,255)", width=2)),
             name="Ruta NN",
+            showlegend=False,
         ),
         row=1,
         col=2,
     )
+    add_nodes_to_subplot(1, 2, nn_path)
 
-    # Ajuste de ejes (mantiene proporción entre ejes X e Y)
-    fig.update_xaxes(title_text="Longitud (escala relativa)", row=1, col=1)
-    fig.update_yaxes(
-        title_text="Latitud (escala relativa)",
-        row=1,
-        col=1,
-        scaleanchor="x1",
-        scaleratio=1,
-    )
-    fig.update_xaxes(title_text="Longitud (escala relativa)", row=1, col=2)
-    fig.update_yaxes(
-        title_text="Latitud (escala relativa)",
-        row=1,
-        col=2,
-        scaleanchor="x2",
-        scaleratio=1,
-    )
+    # Ajuste de ejes con marco negro
+    for col in [1, 2]:
+        fig.update_xaxes(
+            title_text="<b>Longitud (escala relativa)</b>",
+            row=1,
+            col=col,
+            showgrid=True,
+            gridcolor="rgb(230,230,230)",
+            gridwidth=1,
+            showline=True,
+            linewidth=3,
+            linecolor="rgb(30,30,30)",
+            mirror=True,
+        )
+        fig.update_yaxes(
+            title_text="<b>Latitud (escala relativa)</b>",
+            row=1,
+            col=col,
+            scaleanchor=f"x{col}",
+            scaleratio=1,
+            showgrid=True,
+            gridcolor="rgb(230,230,230)",
+            gridwidth=1,
+            showline=True,
+            linewidth=3,
+            linecolor="rgb(30,30,30)",
+            mirror=True,
+        )
 
     fig.update_layout(
-        title="TSP sobre grafo euclidiano (posiciones reescaladas)",
+        title=(
+            f"<b style='font-size:24px'>Problema del Viajante (TSP) - Comparación de Métodos</b><br>"
+            f"<span style='font-size:18px'>Grafo Euclidiano con {len(cities)} ciudades</span>"
+        ),
         showlegend=False,
-        plot_bgcolor="white",
+        plot_bgcolor="rgb(250,250,250)",
         paper_bgcolor="white",
-        width=1200,
-        height=600,
-        margin=dict(t=90, r=60, b=60, l=70),
-        font=dict(color="black", size=13),
+        width=1500,
+        height=750,
+        margin=dict(t=170, r=80, b=80, l=80),
+        font=dict(color="rgb(30,30,30)", size=15, family="Arial"),
+        title_y=0.95,
     )
+    # Separar visualmente los títulos de los subplots del gráfico
+    for ann in fig['layout']['annotations']:
+        ann['yshift'] = 20
 
-    fig.show()
+    # Mostrar en navegador para evitar dependencia nbformat
+    fig.show(renderer="browser")
