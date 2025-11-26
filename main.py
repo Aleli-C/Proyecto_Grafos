@@ -3,7 +3,6 @@ import math
 import time
 import random
 
-from dijkstra_alg import dijkstra, reconstruct_path
 from heuristics import brute_force_tsp, nearest_neighbor_tsp
 from visualization import (
     animate_bruteforce_plotly,
@@ -96,10 +95,9 @@ def select_cities(cities: list, n: int = 9, seed: int = 42) -> list:
 # ==============================
 
 def main():
-    # Seleccionar 9 ciudades de la base completa (15)
+    # Seleccionar 9 ciudades de la base completa
     cities = select_cities(ALL_CITIES, n=9)
 
-    total = len(ALL_CITIES)
     n = len(cities)
     print(f"Número de ciudades seleccionadas para el experimento: {n}\n")
 
@@ -113,36 +111,6 @@ def main():
 
     D = build_distance_matrix(cities)
     print_distance_matrix(D, cities)
-
-    # --- Dijkstra: ejemplo desde la ciudad índice 0 ---
-    origen = 0
-    dist, prev = dijkstra(D, origen)
-
-    print("=== DIJKSTRA DESDE ORIGEN ===")
-    for i, d_val in enumerate(dist):
-        print(
-            f"Distancia mínima {cities[origen]['name']} "
-            f"-> {cities[i]['name']}: {d_val:.4f}"
-        )
-    print()
-
-    # Camino mínimo desde origen hasta la última ciudad del subconjunto
-    destino = n - 1
-    path_dij = reconstruct_path(prev, origen, destino)
-    if path_dij:
-        names_path = " -> ".join(cities[i]["name"] for i in path_dij)
-        print(
-            f"Camino mínimo {cities[origen]['name']} "
-            f"-> {cities[destino]['name']}:"
-        )
-        print("  Índices:", path_dij)
-        print("  Nombres:", names_path)
-        print(f"  Longitud total: {dist[destino]:.4f}\n")
-    else:
-        print(
-            f"No hay camino desde {cities[origen]['name']} "
-            f"a {cities[destino]['name']}\n"
-        )
 
     # --- Búsqueda exhaustiva (óptimo TSP) ---
     t0 = time.perf_counter()
